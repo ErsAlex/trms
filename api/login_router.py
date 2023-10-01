@@ -12,8 +12,6 @@ router = APIRouter(
     tags=["Login"],
 )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
-
 
 @router.post("", response_model=Token)
 async def get_access_token(response: Response, uow: UOWDependency, form_data: OAuth2PasswordRequestForm = Depends()):

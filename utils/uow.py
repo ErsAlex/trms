@@ -32,6 +32,7 @@ class UnitOfWork:
     def __init__(self):
         self.session_factory = async_session_maker
 
+
     async def __aenter__(self):
         self.session = self.session_factory()
 
