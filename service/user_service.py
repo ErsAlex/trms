@@ -1,4 +1,4 @@
-from schemas.user_schemas import UserCreateSchema, UserSchema
+from schemas.user_schemas import UserCreateSchema, UserSchema, UserUpdateSchema
 from service.hashing import get_password_hash
 from fastapi import Depends
 from utils.uow import AbstractUOW
@@ -23,4 +23,15 @@ class UserService:
             user = UserSchema(id=user.id, user_name=user.user_name, user_surname=user.user_surname,email=user.email)
             return user
 
+    async def find_user_by_email(self, uow: AbstractUOW, email):
+        async with uow:
+            user = await uow.users.find_one(email=email)
+            user = UserSchema(id=user.id, user_name=user.user_name, user_surname=user.user_surname, email=user.email)
+            return user
 
+    async def update_current_user(self, uow: AbstractUOW, user_id,  data: UserUpdateSchema):
+        async with uow:
+            user_dict = data.model_dump()
+            user = await uow.users.edit_one(user_dict, id=user_id)
+            user = UserSchema(id=user.id, user_name=user.user_name, user_surname=user.user_surname, email=user.email)
+            return user

@@ -13,6 +13,12 @@ class UserSchema(BaseModel):
         from_attributes = True
 
 
+class UserUpdateSchema(BaseModel):
+    user_name: str
+    user_surname: str
+    email: str
+
+
 class UserCreateSchema(BaseModel):
     user_name: str
     user_surname: str
