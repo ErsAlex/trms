@@ -1,9 +1,9 @@
 import uuid
 import enum
-from sqlalchemy import create_engine, select, text, types, ForeignKey
+from sqlalchemy import text, types, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, declarative_base, relationship
-from typing import Annotated
-from schemas.user_schemas import UserSchema
+from typing import Annotated, List
+
 from datetime import datetime
 
 Base = declarative_base()
@@ -24,9 +24,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(unique=True ,nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     password: Mapped[str] = mapped_column(nullable=False)
-    created_rooms = relationship("Room", back_populates="owner")
-    room_accesses = relationship("RoomAccess", back_populates="user")
-
+    created_rooms: Mapped[List["Room"]] = relationship(back_populates="owner")
+    created_tasks: Mapped[List["Task"]] = relationship(back_populates="owner")
+    room_accesses: Mapped[List['RoomAccess']] = relationship(back_populates="user")
+    assigned_tasks: Mapped[List["TaskAssignment"]] = relationship(back_populates="user")
 
 class Room(Base):
     __tablename__ = "rooms"
@@ -36,12 +37,14 @@ class Room(Base):
     name: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
-    owner = relationship("User", back_populates="created_rooms")
-    room_accesses = relationship("RoomAccess", back_populates="room")
+    owner: Mapped["User"] = relationship(back_populates="created_rooms")
+    room_accesses: Mapped[List["RoomAccess"]] = relationship(back_populates="room")
+    tasks: Mapped[List["Task"]] = relationship(back_populates="room")
 
-class RoomRole(enum.Enum):
-    # can assign, invite, promote
-    ROOM_CREATOR = "ROOM_CREATOR"
+
+class RoomRole(str, enum.Enum):
+    # can assign, invite, promote, update rooms
+    ROOM_ADMIN = "ROOM_ADMIN"
     # can assign task to users and invite users
     ROME_LEAD = "ROME_LEAD"
     # can only take tasks
@@ -51,8 +54,47 @@ class RoomRole(enum.Enum):
 class RoomAccess(Base):
     __tablename__ = "room_access"
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_permissions: Mapped[RoomRole]
+    user_permissions: Mapped[RoomRole] = mapped_column(default=RoomRole.ROOM_USER)
     user_id: Mapped[uuid.UUID] = mapped_column(types.UUID, ForeignKey("users.id"))
     room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id"))
-    user = relationship("User", back_populates="room_accesses")
-    room = relationship("Room", back_populates="room_accesses")
+    user: Mapped["User"] = relationship(back_populates="room_accesses")
+    room: Mapped["Room"] = relationship(back_populates="room_accesses")
+
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    owner_id: Mapped[uuid.UUID] = mapped_column(types.UUID, ForeignKey("users.id"))
+    task_name: Mapped[str] = mapped_column(nullable=False)
+    room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id"))
+    date_created: Mapped[created_at]
+    date_updated: Mapped[updated_at]
+    description: Mapped[str] = mapped_column(nullable=True)
+    is_assigned: Mapped[bool] = mapped_column(default=False)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    owner: Mapped["User"] = relationship(back_populates="created_tasks")
+    room: Mapped["Room"] = relationship(back_populates="tasks")
+    assignments: Mapped[List["TaskAssignment"]] = relationship(back_populates="task")
+    task_history: Mapped[List["TaskHistory"]] = relationship(back_populates="task")
+
+
+class TaskAssignment(Base):
+    __tablename__ = "task_assignments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(types.UUID, ForeignKey("users.id"))
+    task: Mapped["Task"] = relationship(back_populates='assignments')
+    user: Mapped["User"] = relationship(back_populates="assigned_tasks")
+
+
+class TaskHistory(Base):
+    __tablename__ = "task_history"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
+    comment: Mapped[str] = mapped_column(nullable=True)
+    author: Mapped[uuid.UUID] = mapped_column(types.UUID)
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
+    task: Mapped["Task"] = relationship(back_populates="task_history")

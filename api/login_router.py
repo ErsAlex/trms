@@ -2,10 +2,10 @@ from api.security import create_token
 from fastapi import APIRouter, Depends, status, Response
 from api.dependencies import UOWDependency
 from service.auth_service import AuthService
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from fastapi.exceptions import HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from schemas.utils_schemas import Token
+from fastapi.exceptions import HTTPException
 
 router = APIRouter(
     prefix="/login",

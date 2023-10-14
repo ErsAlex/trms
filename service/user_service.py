@@ -1,9 +1,6 @@
 from schemas.user_schemas import UserCreateSchema, UserSchema, UserUpdateSchema
 from service.hashing import get_password_hash
-from fastapi import Depends
 from utils.uow import AbstractUOW
-from service.hashing import verify_password
-from fastapi.security import OAuth2PasswordRequestForm
 
 
 class UserService:
