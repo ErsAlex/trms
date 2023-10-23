@@ -1,4 +1,4 @@
-from models.models import Room, RoomAccess
+from models.models import Room, UserRoomAccess
 from utils.repository import SQLRepository
 from db import async_session_maker
 from sqlalchemy import select, insert,and_, delete
@@ -10,7 +10,7 @@ class RoomRepository(SQLRepository):
 
 
 class AccessRepository(SQLRepository):
-    model = RoomAccess
+    model = UserRoomAccess
 
     async def delete_access(self, user_id, **filter_by):
         stmt = delete(self.model).filter_by(**filter_by).filter(and_(self.model.user_id == user_id))\

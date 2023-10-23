@@ -1,6 +1,7 @@
 import uuid
 
 from pydantic import BaseModel, EmailStr
+from models.models import User
 
 
 class UserSchema(BaseModel):
@@ -9,8 +10,14 @@ class UserSchema(BaseModel):
     user_surname: str
     email: EmailStr
 
-    class Config:
-        from_attributes = True
+    @classmethod
+    async def from_db_model(cls, user: User):
+        return cls(
+            id=user.id,
+            user_name=user.user_name,
+            user_surname=user.user_surname,
+            email=user.email
+        )
 
 
 class UserUpdateSchema(BaseModel):

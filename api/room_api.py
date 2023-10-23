@@ -1,10 +1,10 @@
 from fastapi import APIRouter
-from schemas.room_schemas import RoomCreateSchema, RoomUpdateSchema, UserAppealSchema, UpdateRoleSchema
+from schemas.room_schemas import RoomCreateSchema, RoomResponseSchema, RoomUpdateSchema,  UpdateRoleSchema, AccessSchema
 from api.dependencies import UOWDependency, CurrentUserDependency
 from service.room_service import RoomService
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 from sqlalchemy.exc import IntegrityError
-import uuid
+
 
 router = APIRouter(
     prefix="/rooms",
@@ -12,20 +12,38 @@ router = APIRouter(
 )
 
 
-@router.post("")
-async def create_room(data: RoomCreateSchema, uow: UOWDependency, current_user: CurrentUserDependency):
+@router.post("/new")
+async def create_room(
+        room_data: RoomCreateSchema,
+        uow: UOWDependency,
+        current_user: CurrentUserDependency
+):
+
     try:
-        room_id = await RoomService().add_room(uow=uow, room_data=data, owner=current_user)
-        return {"room_id": room_id}
+        room: RoomResponseSchema = await RoomService(uow).add_room(
+            room_data,
+            current_user
+        )
+        return room
 
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 
 
 @router.patch("/{room_id}/update")
-async def update_room(data: RoomUpdateSchema, uow: UOWDependency, current_user: CurrentUserDependency, room_id: int):
+async def update_room(
+        data: RoomUpdateSchema,
+        uow: UOWDependency,
+        current_user: CurrentUserDependency,
+        room_id: int
+):
+
     try:
-        updated_room = await RoomService().update_room(uow=uow, room_id=room_id, current_user=current_user, room_data=data)
+        updated_room: RoomResponseSchema = await RoomService(uow).update_room(
+            room_id,
+            data,
+            current_user
+        )
         if not updated_room:
             raise HTTPException(status_code=403, detail="Forbidden")
         return updated_room
@@ -34,35 +52,63 @@ async def update_room(data: RoomUpdateSchema, uow: UOWDependency, current_user: 
 
 
 @router.post("/{room_id}/invite")
-async def invite_user(uow: UOWDependency, current_user: CurrentUserDependency, data: UserAppealSchema, room_id: int):
+async def invite_user(
+        room_id: int,
+        uow: UOWDependency,
+        current_user: CurrentUserDependency,
+        new_access_data: AccessSchema
+):
     try:
-        access_id = await RoomService().give_access(uow, room_id, current_user, data)
-        if not access_id:
+        response = await RoomService(uow).give_access(
+            room_id,
+            new_access_data,
+            current_user
+        )
+        if not response:
             raise HTTPException(status_code=403, detail="Forbidden")
-    #placeholder
-        return {"status": "ok"}
+
+        return response
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 
+
 @router.delete("/{room_id}/kick")
-async def kick_user(uow: UOWDependency, current_user: CurrentUserDependency, data: UserAppealSchema, room_id: int):
+async def kick_user(
+        room_id: int,
+        uow: UOWDependency,
+        current_user: CurrentUserDependency,
+        access_data: AccessSchema = Depends()
+):
+
     try:
-        kicked_user_id = await RoomService().kick_user(uow, room_id, current_user, data)
-        if not kicked_user_id:
+        response = await RoomService(uow).kick_user(
+            access_data,
+            current_user,
+            room_id
+        )
+        if not response:
             raise HTTPException(status_code=403, detail="Forbidden")
-        return {"kicked_user": kicked_user_id}
+        return response
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 
 
 @router.patch("/{room_id}/promote")
-async def update_user_role(uow: UOWDependency, current_user: CurrentUserDependency,
-                           role_data: UpdateRoleSchema, user_id: uuid.UUID, room_id: int):
+async def update_user_role(
+        room_id: int,
+        uow: UOWDependency,
+        current_user: CurrentUserDependency,
+        role_data: UpdateRoleSchema = Depends()
+):
     try:
-        updated_user_resp = await RoomService().update_role_user(uow, room_id, current_user, role_data, user_id)
-        if not updated_user_resp:
+        response = await RoomService(uow).update_role(
+            current_user,
+            role_data,
+            room_id
+        )
+        if not response:
             raise HTTPException(status_code=403, detail="Forbidden")
-        return updated_user_resp
+        return response
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 

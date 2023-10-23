@@ -4,3 +4,5 @@ from utils.repository import SQLRepository
 
 class UserRepository(SQLRepository):
     model = User
+
+

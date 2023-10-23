@@ -21,13 +21,16 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(types.UUID, primary_key=True, default=uuid.uuid4)
     user_name: Mapped[str] = mapped_column(nullable=False)
     user_surname: Mapped[str] = mapped_column(nullable=False)
-    email: Mapped[str] = mapped_column(unique=True ,nullable=False)
+    email: Mapped[str] = mapped_column(unique=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     password: Mapped[str] = mapped_column(nullable=False)
     created_rooms: Mapped[List["Room"]] = relationship(back_populates="owner")
     created_tasks: Mapped[List["Task"]] = relationship(back_populates="owner")
-    room_accesses: Mapped[List['RoomAccess']] = relationship(back_populates="user")
+    room_accesses: Mapped[List['UserRoomAccess']] = relationship(back_populates="user")
     assigned_tasks: Mapped[List["TaskAssignment"]] = relationship(back_populates="user")
+
+
+
 
 class Room(Base):
     __tablename__ = "rooms"
@@ -38,9 +41,8 @@ class Room(Base):
     description: Mapped[str] = mapped_column(nullable=True)
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
     owner: Mapped["User"] = relationship(back_populates="created_rooms")
-    room_accesses: Mapped[List["RoomAccess"]] = relationship(back_populates="room")
+    room_accesses: Mapped[List["UserRoomAccess"]] = relationship(back_populates="room")
     tasks: Mapped[List["Task"]] = relationship(back_populates="room")
-
 
 class RoomRole(str, enum.Enum):
     # can assign, invite, promote, update rooms
@@ -51,7 +53,7 @@ class RoomRole(str, enum.Enum):
     ROOM_USER = "ROOM_USER"
 
 
-class RoomAccess(Base):
+class UserRoomAccess(Base):
     __tablename__ = "room_access"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_permissions: Mapped[RoomRole] = mapped_column(default=RoomRole.ROOM_USER)
@@ -59,7 +61,6 @@ class RoomAccess(Base):
     room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id"))
     user: Mapped["User"] = relationship(back_populates="room_accesses")
     room: Mapped["Room"] = relationship(back_populates="room_accesses")
-
 
 
 class Task(Base):
@@ -83,6 +84,7 @@ class Task(Base):
 class TaskAssignment(Base):
     __tablename__ = "task_assignments"
     id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[created_at]
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
     user_id: Mapped[uuid.UUID] = mapped_column(types.UUID, ForeignKey("users.id"))
     task: Mapped["Task"] = relationship(back_populates='assignments')
@@ -94,7 +96,7 @@ class TaskHistory(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
     comment: Mapped[str] = mapped_column(nullable=True)
-    author: Mapped[uuid.UUID] = mapped_column(types.UUID)
+    author_id: Mapped[uuid.UUID] = mapped_column(types.UUID, nullable=True)
     created_at: Mapped[created_at]
     updated_at: Mapped[updated_at]
     task: Mapped["Task"] = relationship(back_populates="task_history")

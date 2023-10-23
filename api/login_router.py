@@ -14,7 +14,10 @@ router = APIRouter(
 
 
 @router.post("", response_model=Token)
-async def get_access_token(response: Response, uow: UOWDependency, form_data: OAuth2PasswordRequestForm = Depends()):
+async def get_access_token(
+        response: Response,
+        uow: UOWDependency,
+        form_data: OAuth2PasswordRequestForm = Depends()):
     user_id = await AuthService().authenticate_user(uow, form_data)
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

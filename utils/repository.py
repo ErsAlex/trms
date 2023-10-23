@@ -18,16 +18,15 @@ class SQLRepository(AbstractRepository):
         self.session = session
 
     async def add_one(self, data: dict):
-        query = insert(self.model).values(**data).returning(self.model.id)
+        query = insert(self.model).values(**data).returning(self.model)
         result = await self.session.execute(query)
         return result.scalar_one()
 
     async def find_one(self, **filter_by):
         stmt = select(self.model).filter_by(**filter_by)
-        res = await self.session.execute(stmt)
-        res = res.scalar_one()
-        return res
-
+        result = await self.session.execute(stmt)
+        result = result.scalar_one()
+        return result
 
     async def delete_one(self, **filter_by):
         stmt = delete(self.model).filter_by(**filter_by)
@@ -45,3 +44,10 @@ class SQLRepository(AbstractRepository):
         res = await self.session.execute(stmt)
         res = [row[0].to_read_model() for row in res.all()]
         return res
+
+    async def add_all(self, data: list):
+        stmt = self.session.add_all(data)
+        return None
+
+
+
