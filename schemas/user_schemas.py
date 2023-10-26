@@ -1,23 +1,18 @@
 import uuid
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from models.models import User
 
 
 class UserSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     user_name: str
     user_surname: str
-    email: EmailStr
+    email: str
+    is_active: bool
 
-    @classmethod
-    async def from_db_model(cls, user: User):
-        return cls(
-            id=user.id,
-            user_name=user.user_name,
-            user_surname=user.user_surname,
-            email=user.email
-        )
 
 
 class UserUpdateSchema(BaseModel):

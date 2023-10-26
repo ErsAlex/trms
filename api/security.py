@@ -7,8 +7,10 @@ from fastapi import status
 from config import SECRET_KEY, ALGORITHM
 from jose import jwt, JWTError
 import uuid
+from utils.auth_utils import OAuth2PasswordBearerWithCookie
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
+oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="/login")
 
 
 def create_token(data: dict, expiration_delta: timedelta):
@@ -30,4 +32,10 @@ async def get_user_from_token(token: str = Depends(oauth2_scheme)):
         raise exeption
     user_id = uuid.UUID(data)
     return user_id
+
+
+
+
+
+
 

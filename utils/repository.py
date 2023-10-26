@@ -28,6 +28,12 @@ class SQLRepository(AbstractRepository):
         result = result.scalar_one()
         return result
 
+    async def find_one_or_none(self, **filter_by):
+        stmt = select(self.model).filter_by(**filter_by)
+        result = await self.session.execute(stmt)
+        result = result.one_or_none()
+        return result
+
     async def delete_one(self, **filter_by):
         stmt = delete(self.model).filter_by(**filter_by)
         res = await self.session.execute(stmt)
@@ -42,8 +48,8 @@ class SQLRepository(AbstractRepository):
     async def find_all(self, **filter_by):
         stmt = select(self.model).filter_by(**filter_by)
         res = await self.session.execute(stmt)
-        res = [row[0].to_read_model() for row in res.all()]
-        return res
+        result = [row[0] for row in res.all()]
+        return result
 
     async def add_all(self, data: list):
         stmt = self.session.add_all(data)

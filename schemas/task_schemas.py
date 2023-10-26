@@ -25,8 +25,9 @@ class TaskResponseSchema(BaseModel):
     is_active: bool
 
 
-class TaskUpdateSchema(TaskCreateSchema):
-    task_id: int
+class TaskUpdateSchema(BaseModel):
+    task_name: str
+    description: str
 
 
 class AssignSchema(BaseModel):

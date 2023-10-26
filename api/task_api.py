@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from api.dependencies import UOWDependency, CurrentUserDependency
-from schemas.task_schemas import TaskCommentCreateSchema, TaskUpdateSchema, AssignSchema
+from schemas.task_schemas import TaskCommentCreateSchema, TaskUpdateSchema, AssignSchema, TaskCreateSchema
 from service.task_service import TaskService
 from sqlalchemy.exc import IntegrityError
 
@@ -27,31 +27,30 @@ async def create_task(
         )
         if not response:
             raise HTTPException(status_code=403, detail="Forbidden")
-
         return response
-
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 
 
-@router.patch("/{room_id}/tasks/update")
+@router.patch("/{room_id}/tasks/{task_id}update")
 async def update_task(
+        task_id: int,
         room_id: int,
         uow: UOWDependency,
         current_user: CurrentUserDependency,
-        task_data: TaskUpdateSchema = Depends()
+        task_data: TaskUpdateSchema
 ):
 
     try:
         task = await TaskService(uow).update_task(
+            task_id,
             task_data,
-            current_user
-
+            current_user,
+            room_id
 )
         if not task:
             raise HTTPException(status_code=403, detail="Forbidden")
         return task
-
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 
@@ -62,7 +61,6 @@ async def assign_task(
         uow: UOWDependency,
         current_user: CurrentUserDependency,
         assign_data: AssignSchema = Depends()
-
 ):
     try:
         response = await TaskService(uow).assign_task(
@@ -73,7 +71,6 @@ async def assign_task(
         if not response:
             raise HTTPException(status_code=403, detail="Forbidden")
         return response
-
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 
@@ -94,7 +91,6 @@ async def revoke_assignment(
         if not response:
             raise HTTPException(status_code=403, detail="Forbidden")
         return response
-
     except IntegrityError as err:
         raise HTTPException(status_code=503, detail=f"Database error: {err}")
 

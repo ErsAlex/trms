@@ -3,6 +3,9 @@ import uuid
 from schemas.user_schemas import UserCreateSchema, UserSchema, UserUpdateSchema
 from service.hashing import get_password_hash
 from utils.uow import AbstractUOW
+from schemas.room_schemas import RoomResponseSchema
+from schemas.task_schemas import  TaskResponseSchema
+
 
 
 class UserService:
@@ -19,7 +22,7 @@ class UserService:
         async with self.uow:
             created_user = await self.uow.users.add_one(user_dict)
             await self.uow.commit()
-            return UserSchema.from_db_model(created_user)
+            return UserSchema.model_validate(created_user)
 
     async def find_user_by_id(
             self,
@@ -27,7 +30,7 @@ class UserService:
     ):
         async with self.uow:
             user = await self.uow.users.find_one(id=user_id)
-            return UserSchema.from_db_model(user)
+            return UserSchema.model_validate(user)
 
     async def find_user_by_email(
             self,
@@ -49,3 +52,12 @@ class UserService:
                 id=user_id
             )
             return UserSchema.from_db_model(user)
+
+    async def get_user_rooms(
+            self,
+            user_id: uuid.UUID
+    ):
+        async with self.uow:
+            rooms = await self.uow.rooms.get_user_rooms(user_id)
+            rooms = [RoomResponseSchema.model_validate(room) for room in rooms]
+            return rooms

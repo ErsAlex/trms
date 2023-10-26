@@ -2,8 +2,10 @@ import uuid
 from utils.uow import AbstractUOW
 from schemas.room_schemas import RoomCreateSchema, RoomUpdateSchema,\
     RoomResponseSchema, UpdateRoleSchema, AccessResponse, AccessSchema
+from schemas.task_schemas import TaskResponseSchema
+from schemas.user_schemas import UserSchema
 from config import can_invite, can_promote, can_update, can_kick
-from models.models import Room, UserRoomAccess, RoomRole
+from models.models import Room, UserRoomAccess, RoomRole, Task
 
 
 class RoomService:
@@ -62,14 +64,17 @@ class RoomService:
                 user_id=current_user
             )
             if user_access.user_permissions in can_invite:
+
+                invited_user_access: UserRoomAccess = await self.uow.access.find_one_or_none(
+                    room_id=room_id,
+                    user_id=access_data.user_id
+                )
+                if invited_user_access:
+                    return AccessResponse.model_validate(invited_user_access)
                 data = {
                     "user_id": access_data.user_id,
                     "room_id": room_id
                 }
-                invited_user_access = await self.uow.access.find_one(**data)
-                if invited_user_access:
-                    return AccessResponse.model_validate(invited_user_access)
-
                 new_user_access: UserRoomAccess = await self.uow.access.add_one(data)
                 await self.uow.commit()
                 return AccessResponse.model_validate(new_user_access)
@@ -89,18 +94,19 @@ class RoomService:
                 user_id=current_user
             )
             if current_user_access.user_permissions in can_kick:
-                data = {
-                    "room_id": room_id,
-                    "user_id": access_data.user_id
-                }
-
-                user_for_del: UserRoomAccess = await self.uow.access.find_one(**data)
+                user_for_del: UserRoomAccess = await self.uow.access.find_one(
+                    room_id=room_id,
+                    user_id=access_data.user_id
+                )
                 if user_for_del.user_permissions in can_kick:
                     return None
-                kicked_user: UserRoomAccess = await self.uow.access.delete_one(**data)
+                kicked_user: UserRoomAccess = await self.uow.access.delete_one(
+                    room_id=room_id,
+                    user_id=access_data.user_id
+                )
 
                 await self.uow.commit()
-                return AccessResponse.model_validate(kicked_user)
+                return {"user_id": access_data.user_id, "access_revoked": True}
 
             return None
 
@@ -133,6 +139,39 @@ class RoomService:
                 return AccessResponse.model_validate(updated_access)
 
             return None
+
+    async def get_room_tasks(
+            self,
+            room_id: int,
+            current_user: uuid.UUID
+    ):
+        async with self.uow:
+            current_user_access: UserRoomAccess = await self.uow.access.find_one(
+                room_id=room_id,
+                user_id=current_user
+            )
+            if current_user_access:
+                tasks = await self.uow.task.find_all(room_id=room_id)
+                tasks = [TaskResponseSchema.model_validate(task) for task in tasks]
+                return tasks
+            return None
+
+    async def get_room_users(
+            self,
+            room_id: int,
+            current_user: uuid.UUID
+    ):
+        async with self.uow:
+            current_user_access: UserRoomAccess = await self.uow.access.find_one(
+                room_id=room_id,
+                user_id=current_user
+            )
+            if current_user_access:
+                users = await self.uow.users.get_room_users(room_id)
+                users = [UserSchema.model_validate(user) for user in users]
+                return users
+            return None
+
 
 
 

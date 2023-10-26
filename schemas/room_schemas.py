@@ -38,7 +38,7 @@ class UpdatedRoleResponseSchema(BaseModel):
 
 
 class AccessSchema(BaseModel):
-    user_id : uuid.UUID
+    user_id: uuid.UUID
 
 
 class AccessResponse(BaseModel):

@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.post("", response_model=Token)
+@router.post("")
 async def get_access_token(
         response: Response,
         uow: UOWDependency,
@@ -27,5 +27,5 @@ async def get_access_token(
     access_token = create_token(data={"sub": user_id},
                                 expiration_delta=access_token_expired)
     refresh_token = create_token(data={"sub": user_id}, expiration_delta=refresh_token_expired)
-    response.set_cookie(key='refresh_token', value=refresh_token, samesite="lax", httponly=True)
-    return {"access_token": access_token, "token_type": "bearer"}
+    response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True)
+    return {"status": "token issued"}

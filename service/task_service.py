@@ -39,6 +39,7 @@ class TaskService:
 
     async def update_task(
             self,
+            task_id: int,
             task_data: TaskUpdateSchema,
             current_user: uuid.UUID,
             room_id: int
@@ -52,7 +53,7 @@ class TaskService:
                 task_dict = task_data.model_dump()
                 task: Task = await self.uow.task.edit_one(
                     task_dict,
-                    id=task_data.task_id
+                    id=task_id
                 )
                 history_data = {
                     "task_id": task.id,
@@ -104,9 +105,13 @@ class TaskService:
                 user_id=current_user
             )
             if current_user_access.user_permissions in can_give_tasks:
-                assign = assign_data.model_dump()
-                revoke_assignment = await self.uow.task_assignment.delete_one(assign)
-                return AssignResponseSchema.model_validate(revoke_assignment)
+                revoke_assignment = await self.uow.task_assignment.delete_one(
+                    user_id=assign_data.user_id,
+                    task_id=assign_data.task_id
+                )
+                return {"user_id": assign_data.user_id,
+                        "status": "assignment revoked"
+                        }
             return None
 
     async def add_comment(
@@ -126,3 +131,31 @@ class TaskService:
             comment: TaskHistory = await self.uow.task_history.add_one(history_dict)
             return TaskCommentResponse.model_validate(comment)
         return None
+
+    async def get_tasks(
+            self,
+            room_id: int | None,
+            current_user: uuid.UUID
+    ):
+        if room_id:
+            async with self.uow:
+                current_user_access: UserRoomAccess = await self.uow.access.find_one(
+                    room_id=room_id,
+                    user_id=current_user
+                )
+                if current_user_access:
+                    tasks = await self.uow.task.find_all(room_id=room_id)
+                return None
+        else:
+            tasks = await self.uow.task.find_all(owner_id=current_user)
+        tasks = [TaskResponseSchema.model_validate(task) for task in tasks]
+        return tasks
+
+    async def get_user_tasks(
+            self,
+            user_id: uuid.UUID
+    ):
+        async with self.uow:
+            tasks = await self.uow.task.get_user_assigns(user_id)
+            tasks = [TaskResponseSchema.model_validate(task) for task in tasks]
+            return tasks
